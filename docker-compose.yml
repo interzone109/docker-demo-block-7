@@ -1,0 +1,73 @@
+version: "3.7"
+#
+services:
+  api: # условное название нашего компоса
+    build: # указываем на основе чего собираем (можно использовать готовый - image: rabbitmq)
+      context: . # контекст из корня
+      dockerfile: ./apps/api/Dockerfile # путь к докерфайлу
+    restart: always # сценарий при падении контейнера
+    container_name:  api # имя контейнера
+    volumes: # волюм для шеринга .env  в котором лежат конфиги подключения к бд
+      - ./.env:/opt/app/.env
+    ports:
+      - "3002:3000"
+    networks: # сеть
+      - myNetwork
+    depends_on: # говорит нам о последовательности сборки ( в начале собиреться rmq)
+      - rmq
+    profiles:
+      - backend
+      - dev
+      - prod
+  rmq:
+    image: rabbitmq:3-management # собираем через готовый имедж
+    restart: always # отказоустойчивость контейнера
+    networks: # сеть
+      - myNetwork
+    environment: # переменные окружения для подключения к бд
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin
+    profiles:
+      - dev
+      - prod
+  app:
+    build:
+      context: .
+      dockerfile: ./apps/app/Dockerfile
+    restart: always
+    container_name: app
+    ports:
+     - "3001:80"
+    networks:
+      - myNetwork
+    profiles:
+      - dev
+      - prod
+  converter:
+    build:
+      context: .
+      dockerfile: apps/converter/Dockerfile
+    restart: always
+    volumes:
+      - ./.env:/opt/app/.env
+    container_name: converter
+    networks:
+       - myNetwork
+    profiles:
+       - dev
+       - prod
+    depends_on:
+      - rmq
+
+
+networks:
+  myNetwork:
+    driver: bridge
+
+
+
+# docker-compose --profile dev --env-file .env.compose up -d
+# "${NAME}" - переменная с именем контейнера из файла .env
+# COMPOSE_PROJECT_NAME=test_name  - назначаем наш префикс для контейнера вместо docker_app
+
+# композиция docker-compose -f docker-compose.yml -f docker-compose.dev.yml --profile dev --env-file .env.compose up -d
