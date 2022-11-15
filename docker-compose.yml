@@ -22,6 +22,8 @@ services:
   rmq:
     image: rabbitmq:3-management # собираем через готовый имедж
     restart: always # отказоустойчивость контейнера
+    ports:
+      - "15672:15672"
     networks: # сеть
       - myNetwork
     environment: # переменные окружения для подключения к бд
